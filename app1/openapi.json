@@ -1,0 +1,93 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "app1", "version": "1.0.0" },
+  "paths": {
+    "/items": {
+      "get": {
+        "summary": "List items",
+        "responses": {
+          "200": {
+            "description": "All items",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an item",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemIn" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Created item",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+      ],
+      "get": {
+        "summary": "Read an item",
+        "responses": {
+          "200": {
+            "description": "The item",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "summary": "Update an item",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemIn" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated item",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "summary": "Delete an item",
+        "responses": {
+          "200": {
+            "description": "Deleted item",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "NotFound": {
+        "description": "No item with that id",
+        "content": {
+          "application/json": {
+            "schema": { "type": "object", "properties": { "detail": { "type": "string" } }, "required": ["detail"] }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ItemIn": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      },
+      "Item": {
+        "type": "object",
+        "properties": { "id": { "type": "integer" }, "name": { "type": "string" } },
+        "required": ["id", "name"]
+      }
+    }
+  }
+}
