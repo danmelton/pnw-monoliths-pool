@@ -25,6 +25,11 @@ with the WSL 2 backend (OrbStack is Mac-only).
 - Clone this repo inside WSL (e.g. `~/code` in Ubuntu), not on `C:\`. Folders on
   the Windows drive may not pass file-change events into containers, so live
   reload wouldn't work.
+- Step-by-step guides:
+  - [Install Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/) (Docker)
+  - [Docker Desktop and WSL 2](https://docs.docker.com/desktop/features/wsl/) (Docker)
+  - [WSL best practices](https://docs.docker.com/desktop/features/wsl/best-practices/) (Docker; why to keep code inside WSL)
+  - [Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Microsoft)
 
 **Check it works:** `docker --version` and `docker compose version`.
 
