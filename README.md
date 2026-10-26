@@ -35,11 +35,18 @@ with the WSL 2 backend (OrbStack is Mac-only).
 docker compose up --build
 ```
 
-Try it:
+Test express app:
 
 ```sh
 curl -X POST localhost:3000/items -H 'Content-Type: application/json' -d '{"name":"apple"}'
 curl localhost:3000/items
+```
+
+Test fastapi app:
+
+```sh
+curl -X POST localhost:8000/items -H 'Content-Type: application/json' -d '{"name":"apple"}'
+curl localhost:8000/items
 ```
 
 Routes (both apps): `GET /items`, `POST /items`, `GET /items/{id}`, `PUT /items/{id}`, `DELETE /items/{id}`.
