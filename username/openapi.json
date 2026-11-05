@@ -1,0 +1,29 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "username", "version": "1.0.0" },
+  "paths": {
+    "/usernames": {
+      "get": {
+        "summary": "List usernames",
+        "responses": {
+          "200": {
+            "description": "The usernames and their count",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UsernameList" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UsernameList": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer" },
+          "usernames": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["count", "usernames"]
+      }
+    }
+  }
+}
