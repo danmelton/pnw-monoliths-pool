@@ -1,13 +1,21 @@
 import express from 'express';
+import {adjectives, generateMany, nouns} from 'unique-username-generator';
 
 const app = express();
 app.use(express.json());
 
-const items = new Map<number, Item>();
-let nextId = 1;
+const MIN_COUNT = 1;
+const MAX_COUNT = 100;
+const DEFAULT_COUNT = 10;
 
-app.get('/usernames', (_req, res) => {
-  const usernames = [...Array(10).keys()].map((v, i) => `username_${i}`)
+app.get('/usernames', (req, res) => {
+  const count = req.query.count === undefined ? DEFAULT_COUNT : Number(req.query.count);
+  if (!Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) {
+    res.status(400).json({detail: `count must be an integer between ${MIN_COUNT} and ${MAX_COUNT}`});
+    return;
+  }
+
+  const usernames = generateMany({dictionaries: [adjectives, nouns], count, unique: true});
   res.json({count: usernames.length, usernames});
 });
 
