@@ -11,5 +11,9 @@ app.get('/usernames', (_req, res) => {
   res.json({count: usernames.length, usernames});
 });
 
+app.all('/usernames', (_req, res) => {
+  res.set('Allow', 'GET, HEAD').status(405).json({detail: 'Method not allowed'});
+});
+
 const port = Number(process.env.PORT ?? 3000);
 app.listen(port, () => console.log(`app1 listening on port ${port}`));
