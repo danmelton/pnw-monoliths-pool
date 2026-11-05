@@ -55,6 +55,17 @@ Each app's code is mounted into its container, so edits reload live (no rebuild)
 
 Stop with `docker compose down`.
 
+## Test an app against its spec
+
+[Schemathesis](https://schemathesis.readthedocs.io) sends requests based on an app's `openapi.json` and reports any responses that don't match it. To run it, install [uv](https://docs.astral.sh/uv/getting-started/installation/) (Mac: `brew install uv`), start the apps, then point it at the spec and port of the app you want to test. From the repo root:
+
+```sh
+docker compose up --build -d
+uvx schemathesis run username/openapi.json --url http://localhost:3001
+```
+
+If a test fails, the output includes a `curl` command that reproduces it.
+
 ## Changed dependencies?
 
 Dependencies don't reload live; they're baked into each image. After changing
@@ -75,7 +86,7 @@ Next, make sure you chose a new port.
 
 All new code into the repo needs to be through pull requests. For your service, you should assign the PR to one of you co-devs on the project.
 
-If you change the endpoints, you should also change the spec. We'll create a CD script on github for the PR to check the spec. 
+If you change the endpoints, you should also change the spec. 
 
 On succesful merge, we should tag MAJOR.MINOR.BUG so we can pin the app-pool code base for our own apps.
 
