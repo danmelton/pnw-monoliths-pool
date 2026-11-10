@@ -1,7 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="app2", version="1.0.0")
+
+# Let the test page (and other browser origins) call this API.
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 class ItemIn(BaseModel):

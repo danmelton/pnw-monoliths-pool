@@ -90,6 +90,10 @@ If you change the endpoints, you should also change the spec.
 
 On succesful merge, we should tag MAJOR.MINOR.BUG so we can pin the app-pool code base for our own apps.
 
+## Userinterface Testing
+
+Test.html contains a simple crud viewer for each service. Open test.html to add any new function calls.
+
 #### Microservices & Developers
 
 - Image Microservice: Dan, Russell
