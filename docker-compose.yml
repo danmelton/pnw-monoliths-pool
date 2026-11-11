@@ -20,3 +20,10 @@ services:
       - ./csv-exporter:/app
     ports:
       - "127.0.0.1:3002:8000"
+  username:
+    build: ./username/
+    command: ["node", "--watch-path=src", "src/index.ts"]
+    volumes:
+      - ./username/src:/app/src
+    ports:
+      - "127.0.0.1:3001:3000"

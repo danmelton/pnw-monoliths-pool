@@ -1,0 +1,49 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "username", "version": "1.0.0" },
+  "paths": {
+    "/usernames": {
+      "get": {
+        "summary": "List usernames",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "query",
+            "description": "How many usernames to generate",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The usernames and their count",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UsernameList" } } }
+          },
+          "400": {
+            "description": "count is not an integer between 1 and 100",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UsernameList": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer" },
+          "usernames": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["count", "usernames"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "detail": { "type": "string" }
+        },
+        "required": ["detail"]
+      }
+    }
+  }
+}

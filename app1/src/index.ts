@@ -5,6 +5,17 @@ type Item = { id: number; name: string };
 const app = express();
 app.use(express.json());
 
+// Let the test page (and other browser origins) call this API.
+app.use((req, res, next) => {
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  });
+  if (req.method === 'OPTIONS') return void res.sendStatus(204);
+  next();
+});
+
 const items = new Map<number, Item>();
 let nextId = 1;
 
