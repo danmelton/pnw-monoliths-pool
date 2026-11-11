@@ -1,0 +1,172 @@
+// App Pool Test Page
+// Adapted by Dan Melton from personal project
+// Adapted on Nov 8, 2026
+// New code is the services for api project
+// Old code is the panels
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PNW App Pool Monolith Page</title>
+   // CSS used PICO CSS https://picocss.com/ Nov 8 2026 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css">
+  <style>
+    pre { height: 360px; overflow: auto; margin: 0; padding: 1rem; }
+    textarea[data-out="code"] { height: 360px; margin: 0; padding: 1rem; font-family: var(--pico-font-family-monospace); font-size: .875rem; white-space: pre; resize: vertical; }
+    h6 button { padding: 0 .5rem; margin-left: .5rem; font-size: .75rem; }
+    .ok { color: var(--pico-ins-color); }
+    .err { color: var(--pico-del-color); }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>App pool test page</h1>
+    <!-- The service panels are built from SERVICES in the script below. -->
+  </main>
+
+  <script>
+    // =========================================================================
+    // ADD YOUR SERVICE
+    //
+    // 1. Write a request function in "Request functions" below. Copy
+    //    getUsernames.
+    //
+    // 2. Add an entry to SERVICES (below the functions):
+    //      title      shown on the panel's heading
+    //      urlName    name of the URL constant in the panel's code, e.g. 'MYSERVICE_URL'
+    //      url        where the service runs (its port in docker-compose.yml)
+    //      functions  the request functions to copy into the panel's code
+    //      call       the last lines of the code: the call that runs. Must `return`
+    //                 the result. Put other calls to try in comments above it.
+    //
+    // 3. Your service must allow CORS, or the browser blocks the response.
+    //    See the middleware near the top of username/src/index.ts (Express)
+    //    or app2/main.py (FastAPI).
+    //
+    // Reload the page and your panel appears. You shouldn't need to edit
+    // anything below "Page wiring".
+    // =========================================================================
+
+    // ---- Add your functions here ----
+
+    // usernames only function call
+    async function getUsernames(count) {
+      const url = `${USERNAME_URL}/usernames?count=${count}`;
+      const res = await fetch(url);
+      const body = await res.json();
+      return { status: res.status, body };
+    }
+
+    // Shared by app1 and app2: they have the same items API, so the URL is a parameter.
+    // If you have multiple rest patterns, you could combine them like so (see the method is post or put area)
+    async function callItems(baseUrl, method, id, name) {
+      const url = id ? `${baseUrl}/items/${id}` : `${baseUrl}/items`;
+      const options = { method };
+      if (method === 'POST' || method === 'PUT') {
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify({ name });
+      }
+      const res = await fetch(url, options);
+      const body = await res.json();
+      return { status: res.status, body };
+    }
+
+
+    const itemsCalls = urlName => `return callItems(${urlName}, 'GET', null, null)`;
+
+    const SERVICES = [
+      {
+        title: 'Username generator',
+        urlName: 'USERNAME_URL',
+        url: 'http://localhost:3001',
+        functions: [getUsernames],
+        call: `// count: 1 to 100
+return getUsernames(10);`,
+      },
+      {
+        title: 'app1 – Express items',
+        urlName: 'APP1_URL',
+        url: 'http://localhost:3000',
+        functions: [callItems],
+        call: itemsCalls('APP1_URL'),
+      },
+      {
+        title: 'app2 – FastAPI items',
+        urlName: 'APP2_URL',
+        url: 'http://localhost:8000',
+        functions: [callItems],
+        call: itemsCalls('APP2_URL'),
+      },
+    ];
+
+    // ---- Page wiring (you shouldn't need to edit below here) ----
+
+    // Source of a function above, strip the extra tabs
+    const source = fn => String(fn).replace(/^    /gm, '');
+
+    // The code a panel starts with, and goes back to on Reset.
+    const startingCode = service => [
+      `const ${service.urlName} = '${service.url}';`,
+      ...service.functions.map(source),
+      service.call,
+    ].join('\n\n');
+
+    const AsyncFunction = (async () => {}).constructor;
+
+    // Builds one service's panel (an accordion) and wires up its buttons.
+    function addPanel(service, index) {
+      const panel = document.createElement('details');
+      panel.open = index === 0;
+      panel.innerHTML = `
+        <summary></summary>
+        <div class="grid">
+          <section><h6>Code <button class="secondary outline" data-action="reset" title="Go back to the starting code">Reset</button></h6><textarea data-out="code" spellcheck="false"></textarea></section>
+          <section><h6>Response <span data-out="status"></span></h6><pre data-out="response">Press "Send request".</pre></section>
+        </div>
+        <button data-action="run">Send request</button>`;
+      panel.querySelector('summary').append(service.title, ' ');
+      panel.querySelector('summary').insertAdjacentHTML('beforeend', '<small><code></code></small>');
+      panel.querySelector('summary code').textContent = new URL(service.url).host;
+
+      const $ = sel => panel.querySelector(sel);
+      const editor = $('[data-out="code"]');
+      const status = $('[data-out="status"]');
+      const response = $('[data-out="response"]');
+      const reset = () => { editor.value = startingCode(service); };
+
+      // Runs the code in the editor and shows what it returns.
+      async function run() {
+        status.textContent = '…';
+        status.className = '';
+        try {
+          const result = await new AsyncFunction(editor.value)();
+          if (result && typeof result === 'object' && 'status' in result && 'body' in result) {
+            status.textContent = result.status;
+            status.className = result.status < 400 ? 'ok' : 'err';
+            response.textContent = JSON.stringify(result.body, null, 2);
+          } else {
+            status.textContent = 'returned';
+            response.textContent = result === undefined ? 'undefined (add a return?)' : JSON.stringify(result, null, 2);
+          }
+        } catch (e) {
+          status.textContent = 'failed';
+          status.className = 'err';
+          response.textContent = e instanceof TypeError && /fetch/i.test(e.message)
+            ? `${e}\n\nIs the service running (docker compose up) and does it allow CORS?`
+            : `${e}`;
+        }
+      }
+
+      $('[data-action="run"]').addEventListener('click', run);
+      $('[data-action="reset"]').addEventListener('click', reset);
+      reset();
+
+      const main = document.querySelector('main');
+      if (index > 0) main.append(document.createElement('hr'));
+      main.append(panel);
+    }
+
+    SERVICES.forEach(addPanel);
+  </script>
+</body>
+</html>
