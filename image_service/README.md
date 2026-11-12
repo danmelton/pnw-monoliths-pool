@@ -74,7 +74,7 @@ else:
 
 | Request                    | Status | Body                                                        |
 | -------------------------- | ------ | ----------------------------------------------------------- |
-| `POST /images`           | 20    |  JSON containing image ID and success message|
+| `POST /images`           | 201    |  JSON containing image ID and success message|
 | `POST /images`  | 400    | `{"error": "Only JPG and PNG file types allowed!}`           |
 | `POST /images`  | 400    | `{"error": "No image added"}`    |
 
