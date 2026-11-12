@@ -51,6 +51,30 @@ def json_to_csv(data, columns=None):
 
 # story3: handle bad/unsafe data (RUSSELL)
 
+# csv injection: excel/sheets run a cell as a formula if it starts with = + - or @
+# so put a ' in front and it shows up as normal text instead
+def make_safe(value):
+    if isinstance(value, str):
+        if len(value) > 0 and value[0] in ["=", "+", "-", "@"]:
+            return "'" + value
+        return value
+
+    # nested objects and lists, go through each value
+    if isinstance(value, dict):
+        new_dict = {}
+        for key in value:
+            new_dict[key] = make_safe(value[key])
+        return new_dict
+
+    if isinstance(value, list):
+        new_list = []
+        for item in value:
+            new_list.append(make_safe(item))
+        return new_list
+
+    # numbers, true/false, null stay the same
+    return value
+
 
 
 if __name__ == "__main__":

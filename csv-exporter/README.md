@@ -36,7 +36,22 @@ Example request (Python):
 
 
 ```python
-TODO: paste the request half of your test program here
+import json
+import urllib.request
+import urllib.error
+
+# data is required, columns and filename are optional
+body = {
+    "data": [
+        {"date": "2026-11-01", "exercise": "Squat", "sets": 3, "reps": 10},
+        {"date": "2026-11-02", "exercise": "Bench Press", "sets": 4, "reps": 8}
+    ],
+    "columns": ["date", "exercise", "reps"],
+    "filename": "workouts_nov.csv"
+}
+
+request = urllib.request.Request("http://localhost:3002/export", data=json.dumps(body).encode("utf-8"),
+                                 headers={"Content-Type": "application/json"}, method="POST")
 ```
 
 ## How to receive data
@@ -52,8 +67,24 @@ The CSV comes back as the response to the same request.
 Example of receiving (Python):
 
 ```python
-TODO: paste the response-handling half of your test program here
+try:
+    with urllib.request.urlopen(request) as response:
+        csv_text = response.read().decode("utf-8")
+        print(csv_text)
+
+    # save it to a file so it opens in excel or google sheets
+    with open("workouts_nov.csv", "w", encoding="utf-8", newline="") as f:
+        f.write(csv_text)
+
+except urllib.error.HTTPError as error:
+    # 400 errors end up here, the body is json with the error code and message
+    problem = json.loads(error.read().decode("utf-8"))
+    print(error.code, problem["error"], problem["message"])
 ```
+
+The full test program is in `test_program.py`. Start the service, then run
+`python test_program.py` from this folder. It runs the cases for each story
+and prints PASS or FAIL for each one.
 
 ## UML sequence diagram
 
