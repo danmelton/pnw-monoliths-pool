@@ -2,11 +2,15 @@
 #Date: 11/10/2026
 
 from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask_cors import CORS
 from PIL import Image
 from pathlib import Path
 import random
 
 app = Flask(__name__)
+
+# lets other pages (like the app pool's test.html) call this service from the browser
+CORS(app)
 
 FOLDER = Path(__file__).resolve().parent.parent  # finds the base folder
 UPLOADS = FOLDER / "uploads"  
