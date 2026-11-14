@@ -116,6 +116,20 @@
       return { status: res.status, type: res.headers.get('Content-Type'), body: await res.json() };
     }
 
+    // CSV exporter: POST a body to /export. A string is sent as is (to test bad JSON).
+    // A CSV comes back as a list of its lines; a 400 comes back as its JSON error.
+    // (The browser can't read Content-Disposition unless the service exposes it in CORS.)
+    async function exportCsv(body) {
+      const res = await fetch(`${CSV_EXPORTER_URL}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: typeof body === 'string' ? body : JSON.stringify(body),
+      });
+      const isCsv = (res.headers.get('Content-Type') || '').includes('text/csv');
+      const result = isCsv ? (await res.text()).replace(/\r\n$/, '').split('\r\n') : await res.json();
+      return { status: res.status, type: res.headers.get('Content-Type'), body: result };
+    }
+
     const itemsCalls = urlName => `return callItems(${urlName}, 'GET', null, null)`;
 
     const SERVICES = [
@@ -165,6 +179,40 @@ return uploadImage();
 // return getImage('abc');                                              // ID isn't 5 digits
 // return uploadImage(new File(['hello'], 'notes.txt'));                // not a JPG or PNG
 // return uploadImage(new File(['not really a picture'], 'fake.png'));  // named .png but isn't an image`,
+      },
+      {
+        title: 'CSV exporter',
+        urlName: 'CSV_EXPORTER_URL',
+        url: 'http://localhost:3002',
+        functions: [exportCsv],
+        call: `// The cases from csv-exporter/test_program.py. Uncomment one to try it.
+
+// Story 1: records with different fields (missing ones are empty cells)
+// return exportCsv({ data: [{ date: '2026-11-01', exercise: 'Squat' }, { date: '2026-11-02', notes: 'felt strong' }] });
+
+// Story 2: choose columns and file name
+// return exportCsv({ data: [{ date: '2026-11-01', exercise: 'Squat', reps: 10 }], columns: ['exercise', 'reps'], filename: 'workouts_nov.csv' });
+
+// Story 3: commas, quotes and line breaks
+// return exportCsv({ data: [{ note: 'She said "hi", then left' }, { note: 'line one\\nline two' }] });
+
+// Story 3: nested values (dotted column, list in one cell)
+// return exportCsv({ data: [{ exercise: { name: 'Squat' }, reps: [10, 8, 6] }] });
+
+// Story 3: values that look like formulas get a ' in front
+// return exportCsv({ data: [{ a: '=SUM(A1:A9)', b: '+1', c: '-cmd', d: '@x', e: 'normal', f: -5 }] });
+
+// Story 3: body isn't valid JSON (400 INVALID_INPUT)
+// return exportCsv('this is not json');
+
+// Story 3: data is an empty list (400 EMPTY_DATA)
+// return exportCsv({ data: [] });
+
+// Story 3: data isn't a list of objects (400 INVALID_INPUT)
+// return exportCsv({ data: [1, 2, 3] });
+
+// Story 1: JSON records to CSV
+return exportCsv({ data: [{ date: '2026-11-01', exercise: 'Squat', reps: 10 }, { date: '2026-11-02', exercise: 'Bench Press', reps: 8 }] });`,
       },
     ];
 
