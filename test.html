@@ -29,7 +29,8 @@
     // ADD YOUR SERVICE
     //
     // 1. Write a request function in "Request functions" below. Copy
-    //    getUsernames.
+    //    getUsernames. Return { status, type, body }; type is the response's
+    //    Content-Type and shows next to the status (leave it out to hide it).
     //
     // 2. Add an entry to SERVICES (below the functions):
     //      title      shown on the panel's heading
@@ -54,7 +55,7 @@
       const url = `${USERNAME_URL}/usernames?count=${count}`;
       const res = await fetch(url);
       const body = await res.json();
-      return { status: res.status, body };
+      return { status: res.status, type: res.headers.get('Content-Type'), body };
     }
 
     // Shared by app1 and app2: they have the same items API, so the URL is a parameter.
@@ -68,9 +69,49 @@
       }
       const res = await fetch(url, options);
       const body = await res.json();
-      return { status: res.status, body };
+      return { status: res.status, type: res.headers.get('Content-Type'), body };
     }
 
+
+    // Image service: upload a JPG or PNG, then retrieve or delete it by its 5-digit imageID.
+    // With no file, uploadImage draws a 1200x800 test PNG in the browser and uploads that.
+    // The page remembers the last upload's imageID (window.lastImageID), so getImage()
+    // and deleteImage() with no ID use it.
+    async function uploadImage(file) {
+      if (!file) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'purple';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const blob = await new Promise(done => canvas.toBlob(done, 'image/png'));
+        file = new File([blob], 'test.png', { type: 'image/png' });
+      }
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(`${IMAGE_URL}/images`, { method: 'POST', body: form });
+      const body = await res.json();
+      if (res.ok) window.lastImageID = body.imageID;
+      return { status: res.status, type: res.headers.get('Content-Type'), body };
+    }
+
+    // An image comes back as its size in bytes and pixels; an error comes back as its JSON.
+    async function getImage(id = window.lastImageID) {
+      if (!id) return 'No image yet: do step 1 (upload) first, or pass an ID like getImage(\'12345\').';
+      const res = await fetch(`${IMAGE_URL}/images/${id}`);
+      const type = res.headers.get('Content-Type');
+      if (!res.ok) return { status: res.status, type, body: await res.json() };
+      const blob = await res.blob();
+      const img = await createImageBitmap(blob);
+      return { status: res.status, type, body: { bytes: blob.size, width: img.width, height: img.height } };
+    }
+
+    async function deleteImage(id = window.lastImageID) {
+      if (!id) return 'No image yet: do step 1 (upload) first, or pass an ID like deleteImage(\'12345\').';
+      const res = await fetch(`${IMAGE_URL}/images/${id}`, { method: 'DELETE' });
+      return { status: res.status, type: res.headers.get('Content-Type'), body: await res.json() };
+    }
 
     const itemsCalls = urlName => `return callItems(${urlName}, 'GET', null, null)`;
 
@@ -96,6 +137,31 @@ return getUsernames(10);`,
         url: 'http://localhost:8000',
         functions: [callItems],
         call: itemsCalls('APP2_URL'),
+      },
+      {
+        title: 'Image service',
+        urlName: 'IMAGE_URL',
+        url: 'http://localhost:5001',
+        functions: [uploadImage, getImage, deleteImage],
+        call: `// HOW TO USE
+// Only ONE "return" line should be on (no // in front). Press "Send request" to run it.
+// To do the next step: put // in front of the line that's on, and take the // off the next one.
+// "Reset" puts this box back the way it started.
+
+// Step 1: upload a test image. The response shows its imageID.
+return uploadImage();
+
+// Step 2: get that image back. It uses the imageID from step 1 for you.
+//         You should see 200, 1200 x 800 (the full-size original).
+// return getImage();
+
+// Step 3: delete it. Then do step 2 again: it should say 404 "Image not found".
+// return deleteImage();
+
+// Error checks. Each one should come back 400 with an error message.
+// return getImage('abc');                                              // ID isn't 5 digits
+// return uploadImage(new File(['hello'], 'notes.txt'));                // not a JPG or PNG
+// return uploadImage(new File(['not really a picture'], 'fake.png'));  // named .png but isn't an image`,
       },
     ];
 
@@ -141,7 +207,9 @@ return getUsernames(10);`,
         try {
           const result = await new AsyncFunction(editor.value)();
           if (result && typeof result === 'object' && 'status' in result && 'body' in result) {
-            status.textContent = result.status;
+            // the body type is the Content-Type without its "; charset=..." part
+            const type = result.type ? ` · ${result.type.split(';')[0]}` : '';
+            status.textContent = `${result.status}${type}`;
             status.className = result.status < 400 ? 'ok' : 'err';
             response.textContent = JSON.stringify(result.body, null, 2);
           } else {

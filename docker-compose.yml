@@ -20,3 +20,10 @@ services:
       - ./username/src:/app/src
     ports:
       - "127.0.0.1:3001:3000"
+  image-service:
+    build: ./image_service
+    command: ["flask", "--app", "src/app.py", "run", "--reload", "--host", "0.0.0.0", "--port", "5001"]
+    volumes:
+      - ./image_service/src:/app/src
+    ports:
+      - "127.0.0.1:5001:5001"
