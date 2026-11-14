@@ -1,116 +1,97 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "app2", "version": "1.0.0" },
+  "info": {
+    "title": "csv-exporter",
+    "version": "1.0.0",
+    "description": "Converts a list of JSON records into a downloadable CSV file. Nested objects are flattened into dotted column names, lists are joined with ';', and text values starting with =, +, - or @ are prefixed with ' to prevent formula injection."
+  },
   "paths": {
-    "/items": {
-      "get": {
-        "summary": "List Items",
-        "operationId": "list_items_items_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } }
-          }
-        }
-      },
+    "/export": {
       "post": {
-        "summary": "Create Item",
-        "operationId": "create_item_items_post",
+        "summary": "Convert JSON records to CSV",
+        "operationId": "export_csv",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemIn" } } }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
-          },
-          "422": { "$ref": "#/components/responses/ValidationError" }
-        }
-      }
-    },
-    "/items/{item_id}": {
-      "parameters": [
-        { "name": "item_id", "in": "path", "required": true, "schema": { "type": "integer", "title": "Item Id" } }
-      ],
-      "get": {
-        "summary": "Read Item",
-        "operationId": "read_item_items__item_id__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
-          },
-          "422": { "$ref": "#/components/responses/ValidationError" }
-        }
-      },
-      "put": {
-        "summary": "Update Item",
-        "operationId": "update_item_items__item_id__put",
-        "requestBody": {
-          "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ItemIn" } } }
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExportRequest" }
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+            "description": "CSV file generated successfully.",
+            "headers": {
+              "Content-Disposition": {
+                "description": "Download filename, e.g. attachment; filename=\"export.csv\"",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string" },
+                "example": "name,age\nAda,36\n"
+              }
+            }
           },
-          "422": { "$ref": "#/components/responses/ValidationError" }
-        }
-      },
-      "delete": {
-        "summary": "Delete Item",
-        "operationId": "delete_item_items__item_id__delete",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
-          },
-          "422": { "$ref": "#/components/responses/ValidationError" }
+          "400": {
+            "description": "Invalid request. error is EMPTY_DATA when data is an empty list, and INVALID_INPUT for every other problem (body not JSON, not an object, data not a list of objects, columns not a list of strings).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
         }
       }
     }
   },
   "components": {
-    "responses": {
-      "ValidationError": {
-        "description": "Validation Error",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HTTPValidationError" } } }
-      }
-    },
     "schemas": {
-      "ItemIn": {
-        "title": "ItemIn",
-        "type": "object",
-        "properties": { "name": { "type": "string", "title": "Name" } },
-        "required": ["name"]
-      },
-      "Item": {
-        "title": "Item",
+      "ExportRequest": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer", "title": "Id" },
-          "name": { "type": "string", "title": "Name" }
+          "data": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "object" },
+            "description": "Records to convert. Each object becomes one CSV row; the header is the union of all keys in first-seen order."
+          },
+          "columns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Which columns to include, in this order. Use dotted names for nested fields (e.g. address.city)."
+          },
+          "filename": {
+            "type": "string",
+            "default": "export.csv",
+            "description": "Optional. Filename returned in the Content-Disposition header."
+          }
         },
-        "required": ["id", "name"]
-      },
-      "HTTPValidationError": {
-        "title": "HTTPValidationError",
-        "type": "object",
-        "properties": {
-          "detail": { "type": "array", "title": "Detail", "items": { "$ref": "#/components/schemas/ValidationError" } }
+        "required": ["data"],
+        "example": {
+          "data": [
+            { "name": "Ada", "age": 36 },
+            { "name": "Grace", "age": 45 }
+          ],
+          "filename": "people.csv"
         }
       },
-      "ValidationError": {
-        "title": "ValidationError",
+      "Error": {
         "type": "object",
         "properties": {
-          "loc": { "type": "array", "title": "Location", "items": { "anyOf": [{ "type": "string" }, { "type": "integer" }] } },
-          "msg": { "type": "string", "title": "Message" },
-          "type": { "type": "string", "title": "Error Type" }
+          "error": {
+            "type": "string",
+            "enum": ["EMPTY_DATA", "INVALID_INPUT"],
+            "description": "EMPTY_DATA when data is an empty list; INVALID_INPUT for all other bad requests."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation of what is wrong."
+          }
         },
-        "required": ["loc", "msg", "type"]
+        "required": ["error", "message"],
+        "example": { "error": "EMPTY_DATA", "message": "data must have at least one record" }
       }
     }
   }

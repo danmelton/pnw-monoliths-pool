@@ -3,7 +3,8 @@
 Converts a list of JSON records into CSV text that opens in Excel, Google Sheets,
 or imports into a database. Nested objects become dotted columns (`device.ip`),
 lists become one cell joined by semicolons (`22;80`), and records with different
-keys are lined up under one header.
+keys are lined up under one header. Text values that start with `=`, `+`, `-` or `@` 
+get a `'` prefix so spreadsheets show them as text instead of running them as formulas.
 
 - Endpoint: `POST http://localhost:3002/export`
 - Communication: REST API (HTTP + JSON in, CSV out)
@@ -62,7 +63,9 @@ The CSV comes back as the response to the same request.
   the first line is the header, each following line is one record. The
   `Content-Disposition` header carries the filename.
 - **Failure:** `400`, `Content-Type: application/json`:
-  `{"error": "INVALID_INPUT", "message": "<what went wrong>"}`
+  `{"error": "<code>", "message": "<what went wrong>"}`
+  - `EMPTY_DATA`: `data` is an empty list
+  - `INVALID_INPUT`: any other bad request (bad JSON, missing `data`, wrong types)
 
 Example of receiving (Python):
 
@@ -83,7 +86,7 @@ except urllib.error.HTTPError as error:
 ```
 
 The full test program is in `test_program.py`. Start the service, then run
-`python test_program.py` from this folder. It runs the cases for each story
+`python3 test_program.py` from this folder. It runs the cases for each story
 and prints PASS or FAIL for each one.
 
 ## UML sequence diagram
@@ -111,8 +114,9 @@ sequenceDiagram
 | Commas & quotes (story 1) | `{"data": [{"ip": "192.168.1.1", "hostname": "router, upstairs", "notes": "runs \"dnsmasq\""}]}` | 200 | `ip,hostname,notes`<br>`192.168.1.1,"router, upstairs","runs ""dnsmasq"""` |
 | Nested + list (story 2) | `{"data": [{"date": "2026-11-01", "exercise": {"name": "Squat", "equipment": {"type": "barbell"}}, "sets": 3, "reps": [10, 8, 6]}]}` | 200 | `date,exercise.name,exercise.equipment.type,sets,reps`<br>`2026-11-01,Squat,barbell,3,10;8;6` |
 | Uneven keys (story 2) | `{"data": [{"date": "2026-11-01", "exercise": "Squat"}, {"date": "2026-11-02", "notes": "felt strong"}]}` | 200 | `date,exercise,notes`<br>`2026-11-01,Squat,`<br>`2026-11-02,,felt strong` |
+| Formula injection (story 3) | `{"data": [{"cell": "=SUM(A1:A3)"}]}` | 200 | `cell`<br>`'=SUM(A1:A3)` |
 | Bad JSON | `not json` | 400 | `{"error":"INVALID_INPUT","message":"Request body must be valid JSON."}` |
-| Empty data | `{"data": []}` | 400 | `{"error":"INVALID_INPUT","message":"data must be a non-empty array of objects"}` |
+| Empty data | `{"data": []}` | 400 | `{"error":"EMPTY_DATA","message":"data must have at least one record"}` |
 
 ## Calling it from TypeScript
 
