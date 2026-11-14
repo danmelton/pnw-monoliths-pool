@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from converter import json_to_csv
 from converter import make_safe
 import json
+import re
 
 app = FastAPI(title="csv-exporter", version="1.0.0")
 
@@ -25,7 +26,7 @@ async def contract_error(request: Request, error: HTTPException):
 async def export(request: Request):
     try:
         body = json.loads(await request.body())
-    except json.JSONDecodeError:
+    except ValueError:
         raise HTTPException(status_code=400, detail="Request body must be valid JSON.")
 
 
@@ -51,7 +52,7 @@ async def export(request: Request):
 
     # columns is optional but has to be a list of strings if its there
     columns_sent = body.get("columns")
-    if columns_sent is not None:
+    if "columns" in body:
         if not isinstance(columns_sent, list):
             raise HTTPException(status_code=400, detail="columns must be an array of column names")
         for col in columns_sent:
@@ -59,8 +60,9 @@ async def export(request: Request):
                 raise HTTPException(status_code=400, detail="columns must be an array of column names")
 
     # check filename
-    if not isinstance(body.get("filename", "export.csv"), str):
-        raise HTTPException(status_code=400, detail="filename must be a string")
+    filename_sent = body.get("filename", "export.csv")
+    if not isinstance(filename_sent, str) or not re.fullmatch(r"[A-Za-z0-9._ -]+", filename_sent):
+        raise HTTPException(status_code=400, detail="filename may only contain letters, numbers, spaces, dots, dashes and underscores")
 
     # csv injection guard (see make_safe in converter.py)
     body["data"] = make_safe(body["data"])

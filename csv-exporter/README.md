@@ -31,7 +31,7 @@ Send a `POST` to `/export` with a JSON body:
 | ---------- | -------- | ----------- |
 | `data`     | yes      | List of JSON objects. Each object becomes one row. |
 | `columns`  | no       | List of column names, in the order you want. If left out, every key is included in the order first seen. |
-| `filename` | no       | Name for the CSV file. This defaults to `export.csv`. |
+| `filename` | no       | Name for the CSV file. Defaults to `export.csv`; `.csv` is added if missing. Letters, numbers, spaces, dots, dashes and underscores only. |
 
 Example request (Python):
 
