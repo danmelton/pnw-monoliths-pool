@@ -58,9 +58,12 @@ async def export(request: Request):
             if not isinstance(col, str):
                 raise HTTPException(status_code=400, detail="columns must be an array of column names")
 
+    # check filename
+    if not isinstance(body.get("filename", "export.csv"), str):
+        raise HTTPException(status_code=400, detail="filename must be a string")
+
     # csv injection guard (see make_safe in converter.py)
     body["data"] = make_safe(body["data"])
-
 
     # extract body fields 
     data = body.get("data")
@@ -70,6 +73,8 @@ async def export(request: Request):
     if not isinstance(data, list) or not data:
         raise HTTPException(status_code=400, detail="data must be a non-empty array of objects")
 
+    if not filename.endswith(".csv"):
+        filename += ".csv"
     # stories 1 & 2: convert data
     csv_output = json_to_csv(data, columns)
 
