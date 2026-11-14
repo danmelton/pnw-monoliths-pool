@@ -1,0 +1,12 @@
+# Schemathesis settings for the image service (see "Test against the spec" in README.md).
+# Random imageIDs almost never exist, so GET and DELETE would only ever see 404.
+# IMAGE_ID is an image uploaded just before the run, so they reach the real code.
+[parameters]
+"path.imageID" = "${IMAGE_ID}"
+
+# Uploads: the spec can only say "a file". It can't say "a real JPG or PNG with a
+# .jpg/.jpeg/.png filename", so most files Schemathesis makes up get a 400.
+# That 400 is the service doing its job, so count it as an expected answer here.
+[[operations]]
+include-operation-id = "upload_image"
+checks.positive_data_acceptance.expected-statuses = ["2xx", 400]

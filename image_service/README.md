@@ -6,6 +6,23 @@ description: A image microservice that resizes, stores, and deletes images
 # Using Images Microservice
 This program uses a Python/Flask Framework 
 
+## Run it with Docker
+
+From the repo root:
+
+```sh
+docker compose up --build -d image-service
+docker compose ps                       # image-service should be "Up" on 127.0.0.1:5001->5001/tcp
+docker compose logs image-service       # look for "Running on http://127.0.0.1:5001"
+```
+
+The test page is at http://localhost:5001. `image_service/src/` is mounted into the
+container, so edits to `app.py` reload live. After changing `requirements.txt`, rebuild
+with `docker compose up --build -d image-service`. Uploaded images are stored inside the
+container, so they're gone after a rebuild.
+
+To check the service against `openapi.json`, see [Test against the spec](#test-against-the-spec).
+
 ## Testing Image Microservice
 
 1. Open a terminal and navigate to the project directory:\
@@ -98,6 +115,23 @@ else:
     print("Error:", response.json())
 
 ```
+
+# Test against the spec
+
+The API is described in `openapi.json`. To check the running service against it with
+[Schemathesis](https://schemathesis.readthedocs.io), start it (`docker compose up --build -d image-service`),
+then from the repo root:
+
+```sh
+# upload a real image first, so GET and DELETE have an imageID that exists
+export IMAGE_ID=$(curl -s -F file=@image_service/imgservice_UML.png http://localhost:5001/images \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["imageID"])')
+
+uvx schemathesis --config-file image_service/schemathesis.toml run image_service/openapi.json --url http://localhost:5001
+```
+
+Without `IMAGE_ID`, every random ID Schemathesis tries is an image that doesn't exist,
+so GET and DELETE only ever return 404 and it warns about "missing test data".
 
 # Image Microservice UML Diagram:
 ![Image Service UML Diagram](imgservice_UML.png)

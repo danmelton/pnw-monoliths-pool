@@ -1,0 +1,138 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "image-service",
+    "version": "1.0.0",
+    "description": "Stores JPG and PNG images. Each upload gets a 5-digit imageID; the service keeps the original and a copy resized to fit within 500x500. Retrieve returns the original."
+  },
+  "paths": {
+    "/images": {
+      "post": {
+        "summary": "Upload an image",
+        "operationId": "upload_image",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "contentMediaType": "application/octet-stream",
+                    "description": "The image. Its filename must end in .jpg, .jpeg or .png, and the file must really be that kind of image."
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Image stored. Use imageID to retrieve or delete it.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UploadResult" } } },
+            "links": {
+              "GetImage": {
+                "operationId": "get_image",
+                "parameters": { "imageID": "$response.body#/imageID" },
+                "description": "The imageID from the upload retrieves that image."
+              },
+              "DeleteImage": {
+                "operationId": "delete_image",
+                "parameters": { "imageID": "$response.body#/imageID" },
+                "description": "The imageID from the upload deletes that image."
+              }
+            }
+          },
+          "400": {
+            "description": "No file field (\"No image added\"), the filename isn't .jpg/.jpeg/.png (\"Only JPG and PNG file types allowed!\"), or the file isn't a readable image (\"invalid image file type!\").",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/images/{imageID}": {
+      "parameters": [
+        {
+          "name": "imageID",
+          "in": "path",
+          "required": true,
+          "description": "The 5-digit ID returned by the upload.",
+          "schema": { "type": "string", "pattern": "^[0-9]{5}$", "example": "40290" }
+        }
+      ],
+      "get": {
+        "summary": "Retrieve an image",
+        "operationId": "get_image",
+        "responses": {
+          "200": {
+            "description": "The original image file, as uploaded.",
+            "content": {
+              "image/png": { "schema": { "type": "string", "contentMediaType": "image/png" } },
+              "image/jpeg": { "schema": { "type": "string", "contentMediaType": "image/jpeg" } }
+            }
+          },
+          "400": {
+            "description": "imageID isn't 5 digits (\"Invalid image ID\").",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "No image has that ID (\"Image not found\").",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an image",
+        "description": "Deletes the original and the resized copy.",
+        "operationId": "delete_image",
+        "responses": {
+          "200": {
+            "description": "Image deleted.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeleteResult" } } }
+          },
+          "400": {
+            "description": "imageID isn't 5 digits (\"Invalid image ID\").",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "No image has that ID (\"Image not found\").",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UploadResult": {
+        "type": "object",
+        "properties": {
+          "imageID": { "type": "string", "pattern": "^[0-9]{5}$" },
+          "message": { "type": "string" },
+          "imagePath": { "type": "string", "description": "Where the original is stored in the service, e.g. uploads/40290.png" }
+        },
+        "required": ["imageID", "message", "imagePath"],
+        "example": { "imageID": "40290", "message": "Image has been successfully uploaded", "imagePath": "uploads/40290.png" }
+      },
+      "DeleteResult": {
+        "type": "object",
+        "properties": {
+          "imageID": { "type": "string", "pattern": "^[0-9]{5}$" },
+          "message": { "type": "string" }
+        },
+        "required": ["imageID", "message"],
+        "example": { "imageID": "40290", "message": "Image deleted successfully" }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        },
+        "required": ["error"],
+        "example": { "error": "Image not found" }
+      }
+    }
+  }
+}
