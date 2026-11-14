@@ -1,0 +1,193 @@
+
+<!-- By Christina Rusu -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Microservice Tester</title>
+
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .close {
+            float: right;
+            font-size: 25px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Image Microservice Tester</h1>
+
+    <!-- Upload an Image -->
+    <h2>Upload an Image</h2>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file"
+               accept=".jpg,.jpeg,.png" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <hr>
+
+    <!-- Retrieve an Image -->
+    <h2>Retrieve an Image</h2>
+
+    <form id="retrieveForm">
+        <input type="text" name="image_id"
+               placeholder="Enter 5-digit image ID"
+               maxlength="5"
+               pattern="[0-9]{5}"
+               required>
+        <button type="submit">Retrieve</button>
+    </form>
+
+    <img id="retrievedImage"
+         style="display:none; max-width:300px; margin-top:15px;">
+
+    <hr>
+
+    <!-- Delete an Image -->
+    <h2>Delete an Image</h2>
+
+    <input type="text" id="deleteImageId"
+           placeholder="Enter 5-digit image ID"
+           maxlength="5"
+           pattern="[0-9]{5}"
+           required>
+
+    <button type="button" onclick="deleteImage()">Delete</button>
+
+    <!-- Modal -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <p id="modalMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        // Display modal
+        function toggleModal(message) {
+            const modal = document.getElementById("imageModal");
+            const modalContent = document.getElementById("modalMessage");
+
+            modalContent.textContent = message;
+            modal.style.display = "flex";
+
+            setTimeout(() => {
+                modal.style.display = "none";
+            }, 5000);
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById("imageModal").style.display = "none";
+        }
+
+        // Upload an image
+        document.getElementById("uploadForm").addEventListener(
+            "submit", async function(event) {
+
+            event.preventDefault();
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch("/images", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    toggleModal(data.message + "! Image ID: " + data.imageID);
+                } else {
+                    toggleModal(data.error);
+                }
+
+            } catch (error) {
+                toggleModal("Unable to connect to the server.");
+            }
+        });
+
+        // Retrieve an image
+        document.getElementById("retrieveForm").addEventListener(
+            "submit", async function(event) {
+
+            event.preventDefault();
+
+            const imageId = this.elements.image_id.value;
+
+            try {
+                const response = await fetch(`/images/${imageId}`);
+
+                if (response.ok) {
+                    const imageBlob = await response.blob();
+                    const imageUrl = URL.createObjectURL(imageBlob);
+
+                    const image = document.getElementById("retrievedImage");
+                    image.src = imageUrl;
+                    image.style.display = "block";
+
+                    toggleModal("Image retrieved successfully!");
+                } else {
+                    const data = await response.json();
+                    toggleModal(data.error || "Image retrieval failed.");
+                }
+
+            } catch (error) {
+                toggleModal("Unable to connect to the server.");
+            }
+        });
+
+        // Delete an image
+        async function deleteImage() {
+            const imageId =
+                document.getElementById("deleteImageId").value;
+
+            if (!/^[0-9]{5}$/.test(imageId)) {
+                toggleModal("Please enter a valid 5-digit image ID.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/images/${imageId}`, {
+                    method: "DELETE"
+                });
+
+                const data = await response.json();
+
+                toggleModal(data.message || data.error);
+
+            } catch (error) {
+                toggleModal("Unable to connect to the server.");
+            }
+        }
+    </script>
+
+</body>
+</html>
