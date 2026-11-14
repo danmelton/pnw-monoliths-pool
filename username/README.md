@@ -5,30 +5,57 @@ description: A tiny username generator microservice
 
 # usernames
 
-TypeScript + Express. spec in `openapi.json`.
-Node 24 runs `src/index.ts` directly, with no build step.
+Generates random usernames like `braveotter`. TypeScript + Express; spec in `openapi.json`.
 
-Run alone:
+- Endpoint: `GET http://localhost:3001/usernames` (under `docker compose`)
+- Communication: REST API (HTTP, JSON out)
 
-```sh
-npm install
-npm start            # http://localhost:3000
-npm run typecheck
+## Run it
+
+From the repo root: `docker compose up --build -d username`. `src/` is mounted, so edits
+reload live. After adding a package (`npm install <pkg>` in this folder), rebuild with the
+same command.
+
+Alone, without Docker: `npm install && npm start` (http://localhost:3000).
+
+## How to request data
+
+Send a `GET` to `/usernames`. One optional query parameter:
+
+| Parameter | Description |
+| --------- | ----------- |
+| `count`   | How many usernames, an integer from 1 to 100. Defaults to 10. |
+
+```ts
+const res = await fetch('http://localhost:3001/usernames?count=3');
 ```
 
-Under `docker compose up` (from the repo root), `src/` is mounted and edits reload live.
+## How to receive data
 
-To add a package, run `npm install <pkg>` here (it updates `package.json` and
-`package-lock.json`), then rebuild: `docker compose up --build -d app1`. The image
-runs `npm ci`, which fails if the lockfile doesn't match `package.json`, so don't
-edit `package.json` by hand without running `npm install`.
+The response is JSON:
 
-Or with Docker: `docker build -t username . && docker run -p 3000:3000 username`.
+| Status | When | Body |
+| ------ | ---- | ---- |
+| 200 | `count` is valid or left out | `{"count": 3, "usernames": ["quietfox", "boldowl", "calmseal"]}` |
+| 400 | `count` isn't an integer from 1 to 100 | `{"detail": "count must be an integer between 1 and 100"}` |
+| 405 | Any method other than GET or HEAD | `{"detail": "Method not allowed"}` |
 
-## Requests and responses
+```ts
+const body = await res.json();
+if (res.ok) {
+  console.log(body.usernames);              // ["quietfox", "boldowl", "calmseal"]
+} else {
+  console.error(res.status, body.detail);   // 400 count must be an integer between 1 and 100
+}
+```
 
-What a client can send and what it gets back. Other methods get a 405, which
-`openapi.json` doesn't list yet.
+## Test program
+
+The **Username generator** panel in the repo's `test.html` calls the service with
+`getUsernames(count)`. It only talks to the service over HTTP (`fetch`) and never imports
+its code. Open `test.html` in a browser and press **Send request**.
+
+## UML sequence diagram
 
 ```mermaid
 sequenceDiagram
@@ -46,43 +73,4 @@ sequenceDiagram
 
     Client->>API: POST, PUT, DELETE, ... /usernames
     API-->>Client: 405 application/json, Allow: GET, HEAD<br/>Error { detail }
-```
-
-Examples:
-``
-
-
-| Request                    | Status | Body                                                        |
-| -------------------------- | ------ | ----------------------------------------------------------- |
-| `GET /usernames`           | 200    | `{"count":10,"usernames":["braveotter", ...]}`              |
-| `GET /usernames?count=3`   | 200    | `{"count":3,"usernames":["quietfox","boldowl","calmseal"]}` |
-
-
-## Fetching usernames with TypeScript
-
-
-```ts
-type UsernameList = {count: number; usernames: string[]};
-type ApiError = {detail: string};
-
-const BASE_URL = 'http://localhost:3000';
-
-async function fetchUsernames(count?: number): Promise<string[]> {
-  const url = new URL('/usernames', BASE_URL);
-  if (count !== undefined) url.searchParams.set('count', String(count));
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    const error = (await res.json()) as ApiError;
-    throw new Error(`${res.status}: ${error.detail}`);
-  }
-
-  const body = (await res.json()) as UsernameList;
-  return body.usernames;
-}
-
-console.log(await fetchUsernames());     // 10 usernames
-console.log(await fetchUsernames(3));    // 3 usernames
-await fetchUsernames(0).catch((e) => console.error(e.message));
-// 400: count must be an integer between 1 and 100
 ```
