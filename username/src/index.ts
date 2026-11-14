@@ -4,6 +4,15 @@ import {adjectives, generateMany, nouns} from 'unique-username-generator';
 const app = express();
 app.use(express.json());
 
+// Log one line per request once it finishes; shows up in `docker compose logs username`.
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+  });
+  next();
+});
+
 // Let the test page (and other browser origins) call this API.
 app.use((req, res, next) => {
   res.set({
@@ -19,6 +28,9 @@ const MIN_COUNT = 1;
 const MAX_COUNT = 100;
 const DEFAULT_COUNT = 10;
 
+// The generator cuts every username to this many characters. Clients can't change it.
+const USERNAME_LENGTH = 15;
+
 app.get('/usernames', (req, res) => {
   const count = req.query.count === undefined ? DEFAULT_COUNT : Number(req.query.count);
   if (!Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) {
@@ -26,7 +38,7 @@ app.get('/usernames', (req, res) => {
     return;
   }
 
-  const usernames = generateMany({dictionaries: [adjectives, nouns], count, unique: true});
+  const usernames = generateMany({dictionaries: [adjectives, nouns], count, length: USERNAME_LENGTH, unique: true});
   res.json({count: usernames.length, usernames});
 });
 
@@ -35,4 +47,4 @@ app.all('/usernames', (_req, res) => {
 });
 
 const port = Number(process.env.PORT ?? 3000);
-app.listen(port, () => console.log(`app1 listening on port ${port}`));
+app.listen(port, () => console.log(`username listening on port ${port}`));
