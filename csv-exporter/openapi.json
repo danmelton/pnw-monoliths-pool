@@ -1,0 +1,98 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "csv-exporter",
+    "version": "1.0.0",
+    "description": "Converts a list of JSON records into a downloadable CSV file. Nested objects are flattened into dotted column names, lists are joined with ';', and text values starting with =, +, - or @ are prefixed with ' to prevent formula injection."
+  },
+  "paths": {
+    "/export": {
+      "post": {
+        "summary": "Convert JSON records to CSV",
+        "operationId": "export_csv",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExportRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CSV file generated successfully.",
+            "headers": {
+              "Content-Disposition": {
+                "description": "Download filename, e.g. attachment; filename=\"export.csv\"",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": { "type": "string" },
+                "example": "name,age\nAda,36\n"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request. error is EMPTY_DATA when data is an empty list, and INVALID_INPUT for every other problem (body not JSON, not an object, data not a list of objects, columns not a list of strings).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ExportRequest": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "object" },
+            "description": "Records to convert. Each object becomes one CSV row; the header is the union of all keys in first-seen order."
+          },
+          "columns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Which columns to include, in this order. Use dotted names for nested fields (e.g. address.city)."
+          },
+          "filename": {
+            "type": "string",
+            "default": "export.csv",
+            "description": "Optional. Filename returned in the Content-Disposition header."
+          }
+        },
+        "required": ["data"],
+        "example": {
+          "data": [
+            { "name": "Ada", "age": 36 },
+            { "name": "Grace", "age": 45 }
+          ],
+          "filename": "people.csv"
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": ["EMPTY_DATA", "INVALID_INPUT"],
+            "description": "EMPTY_DATA when data is an empty list; INVALID_INPUT for all other bad requests."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation of what is wrong."
+          }
+        },
+        "required": ["error", "message"],
+        "example": { "error": "EMPTY_DATA", "message": "data must have at least one record" }
+      }
+    }
+  }
+}
